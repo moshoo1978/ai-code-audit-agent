@@ -13,15 +13,31 @@ st.title("🏛️ AI Architectural Drawing & Code Audit Agent")
 st.markdown("**Automated PA UCC & Multi-Discipline Building Code Compliance Checker**")
 st.divider()
 
-# Sidebar Setup
+# Sidebar Setup & Multi-Jurisdiction Code Selector
 st.sidebar.header("⚙️ Configuration")
-rules_path = "config/pennsylvania_ucc_2021.json"
+
+jurisdiction = st.sidebar.selectbox(
+    "Select Governing Building Code Jurisdiction:",
+    [
+        "2021 PA UCC (Pennsylvania Uniform Construction Code)",
+        "2021 IBC (International Building Code Standard)",
+        "Custom Regional Code Amendments"
+    ]
+)
+
+# Map jurisdiction choice to rule configuration file
+if "PA UCC" in jurisdiction:
+    rules_path = "config/pennsylvania_ucc_2021.json"
+elif "IBC" in jurisdiction:
+    rules_path = "config/ibc_2021.json" if os.path.exists("config/ibc_2021.json") else "config/pennsylvania_ucc_2021.json"
+else:
+    rules_path = "config/pennsylvania_ucc_2021.json"
 
 if os.path.exists(rules_path):
     with open(rules_path, "r") as f:
         rules_data = json.load(f)
-    st.sidebar.success(f"Loaded {len(rules_data.get('rules', []))} PA UCC Rules")
-    st.sidebar.caption(f"**Governing Code:**\n{rules_data.get('governing_code', 'PA UCC')}")
+    st.sidebar.success(f"Loaded {len(rules_data.get('rules', []))} Rules")
+    st.sidebar.caption(f"**Active Code Standard:**\n{jurisdiction}")
 
 uploaded_file = st.sidebar.file_uploader("Upload Architectural Drawing (PDF)", type=["pdf"])
 
@@ -70,7 +86,7 @@ if st.button("🚀 Run Full Compliance Audit", type="primary"):
     with st.spinner("Running Vision LLM Verification..."):
         verify_visual_elements(temp_image_path, "output_data/plan_text.json")
 
-    with st.spinner("Auditing Against 115 PA UCC Rules..."):
+    with st.spinner(f"Auditing Against {jurisdiction}..."):
         run_compliance_audit("output_data/plan_text.json", rules_path, "output_data/audit_report.md")
 
     st.success("Audit Complete!")
