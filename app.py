@@ -61,5 +61,14 @@ with col2:
         with open(report_file, "r") as f:
             report_text = f.read()
         st.markdown(report_text)
+
+        st.divider()
+        st.download_button(
+            label="📥 Download Audit Report (.md)",
+            data=report_text,
+            file_name="PA_UCC_Building_Code_Audit_Report.md",
+            mime="text/markdown",
+            use_container_width=True
+        )
     else:
         st.info("Click **Run Full Compliance Audit** to generate the audit report.")
