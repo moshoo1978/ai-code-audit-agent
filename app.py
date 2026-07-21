@@ -104,7 +104,7 @@ with tab2:
         wall_height = st.slider("Adjust Story Height (Z-Axis Extrusion in feet)", min_value=2.0, max_value=8.0, value=3.2, step=0.2)
     
     with col_ctrl2:
-        render_mode = st.selectbox("Render View Mode:", ["Textured Solid", "Wireframe / Transparent", "Compliance Heatmap"])
+        render_mode = st.selectbox("Render View Mode:", ["Textured Solid", "Compliance Heatmap", "Wireframe / Transparent"])
 
     # Load rooms and openings
     dynamic_rooms, dynamic_openings = load_rooms_and_openings(json_output_path, default_height=wall_height)
@@ -121,6 +121,11 @@ with tab2:
                     mime="model/obj"
                 )
 
-    # Render 3D Model
-    fig_3d = generate_3d_building_model(rooms_data=dynamic_rooms, openings_data=dynamic_openings, wall_height=wall_height)
+    # Render 3D Model with active Render Mode passed
+    fig_3d = generate_3d_building_model(
+        rooms_data=dynamic_rooms, 
+        openings_data=dynamic_openings, 
+        wall_height=wall_height,
+        render_mode=render_mode
+    )
     st.plotly_chart(fig_3d)

@@ -4,7 +4,7 @@ import os
 
 def load_rooms_and_openings(json_path="output_data/plan_text.json", default_height=3.2):
     """
-    Extracts room boundaries along with door/window openings from plan JSON.
+    Extracts room boundaries along with door/window openings and compliance flags from plan JSON.
     """
     rooms = []
     openings = []
@@ -21,7 +21,7 @@ def load_rooms_and_openings(json_path="output_data/plan_text.json", default_heig
         except Exception:
             pass
 
-    # Default spaces and openings if JSON does not contain explicit geometry
+    # Default fallback geometry with embedded compliance status flags
     if not rooms:
         rooms = [
             {
@@ -29,14 +29,18 @@ def load_rooms_and_openings(json_path="output_data/plan_text.json", default_heig
                 "x": [0, 10, 10, 0, 0],
                 "y": [5, 5, 15, 15, 5],
                 "height": default_height,
-                "wall_color": "#1f77b4"
+                "wall_color": "#1f77b4",
+                "status": "PASSED",
+                "note": "PA UCC Sec. 1004 - Occupant Load Compliant"
             },
             {
                 "name": "Corridor / Egress",
                 "x": [10, 20, 20, 10, 10],
                 "y": [5, 5, 15, 15, 5],
                 "height": default_height,
-                "wall_color": "#2ca02c"
+                "wall_color": "#2ca02c",
+                "status": "VIOLATION",
+                "note": "2021 IBC 1006.2 - Common Path of Travel Limit Exceeded (78 ft > 75 ft limit)"
             }
         ]
 
@@ -49,9 +53,9 @@ def load_rooms_and_openings(json_path="output_data/plan_text.json", default_heig
     return rooms, openings
 
 
-def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=3.2):
+def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=3.2, render_mode="Textured Solid"):
     """
-    Generates an interactive 3D model with extruded walls, opening cutouts, floor slabs, and roofs.
+    Generates an interactive 3D model with extruded walls, cutouts, and dynamic compliance heatmaps.
     """
     if not rooms_data or not openings_data:
         rooms_data, openings_data = load_rooms_and_openings(default_height=wall_height)
@@ -63,17 +67,33 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
         x = room["x"]
         y = room["y"]
         h = room.get("height", wall_height)
-        wall_color = room.get("wall_color", "#1f77b4")
+        
+        # Determine color and opacity based on render mode
+        if render_mode == "Compliance Heatmap":
+            status = room.get("status", "PASSED")
+            wall_color = "#e74c3c" if status == "VIOLATION" else "#2ecc71" # Red for violations, Green for pass
+            opacity = 0.85
+            hover_text = f"<b>{room['name']}</b><br>Status: {status}<br>Note: {room.get('note', 'N/A')}"
+        elif render_mode == "Wireframe / Transparent":
+            wall_color = room.get("wall_color", "#1f77b4")
+            opacity = 0.25
+            hover_text = room["name"]
+        else:
+            wall_color = room.get("wall_color", "#1f77b4")
+            opacity = 0.75
+            hover_text = room["name"]
 
-        # Extrude Solid Walls
+        # Extrude Walls
         for i in range(len(x) - 1):
             fig.add_trace(go.Mesh3d(
                 x=[x[i], x[i+1], x[i+1], x[i]],
                 y=[y[i], y[i+1], y[i+1], y[i]],
                 z=[0, 0, h, h],
                 color=wall_color,
-                opacity=0.75,
+                opacity=opacity,
                 name=f"{room['name']} - Wall",
+                hoverinfo="text",
+                text=hover_text,
                 showscale=False
             ))
 
@@ -82,6 +102,8 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
             x=x[:-1], y=y[:-1], z=[0]*(len(x)-1),
             color="#d3d3d3", opacity=0.9,
             name=f"{room['name']} - Floor",
+            hoverinfo="text",
+            text=hover_text,
             showscale=False
         ))
 
@@ -90,6 +112,8 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
             x=x[:-1], y=y[:-1], z=[h]*(len(x)-1),
             color=wall_color, opacity=0.15,
             name=f"{room['name']} - Ceiling",
+            hoverinfo="text",
+            text=hover_text,
             showscale=False
         ))
 
@@ -110,7 +134,7 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
             x_pts = [ox, ox, ox, ox]
             y_pts = [oy, oy + w, oy + w, oy]
 
-        color = "#e74c3c" if op_type == "door" else "#3498db"
+        color = "#e67e22" if op_type == "door" else "#3498db"
         name_tag = "🚪 Door Opening" if op_type == "door" else "🪟 Window Opening"
 
         fig.add_trace(go.Mesh3d(
@@ -124,7 +148,7 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
         ))
 
     fig.update_layout(
-        title="🏛️ Dynamic 3D Model with Door & Window Cutouts",
+        title=f"🏛️ 3D Architectural Model ({render_mode})",
         scene=dict(
             xaxis=dict(title='X Axis (ft)', backgroundcolor="rgb(245, 245, 245)"),
             yaxis=dict(title='Y Axis (ft)', backgroundcolor="rgb(245, 245, 245)"),
@@ -154,14 +178,12 @@ def export_to_obj(rooms_data, file_path="output_data/building_model.obj", wall_h
         
         lines.append(f"o {room['name'].replace(' ', '_')}\n")
         
-        # Write Vertices
         for i in range(len(x) - 1):
             lines.append(f"v {x[i]} {y[i]} 0.0\n")
             lines.append(f"v {x[i+1]} {y[i+1]} 0.0\n")
             lines.append(f"v {x[i+1]} {y[i+1]} {h}\n")
             lines.append(f"v {x[i]} {y[i]} {h}\n")
             
-            # Write Quad Faces
             lines.append(f"f {v_index} {v_index+1} {v_index+2} {v_index+3}\n")
             v_index += 4
 
