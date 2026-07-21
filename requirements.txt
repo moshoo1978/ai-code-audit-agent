@@ -3,3 +3,5 @@ pandas
 pillow
 plotly
 reportlab
+opencv-python-headless
+pdf2image
