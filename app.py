@@ -7,6 +7,7 @@ from PIL import Image
 from scripts.parse_pdf import parse_drawing_pdf
 from scripts.run_audit import run_compliance_audit
 from scripts.generator_3d import generate_3d_building_model
+from scripts.generator_3d import generate_3d_building_model, load_rooms_from_json
 
 # Page Configuration
 st.set_page_config(
@@ -95,15 +96,20 @@ with tab1:
             st.info("Click **'🚀 Run Full Compliance Audit'** above to generate the full PA UCC report.")
 
 with tab2:
-    st.subheader("🧊 Interactive 3D Architectural Extrusion")
+    st.subheader("🧊 Interactive 3D Architectural Extrusion Viewer")
     st.info("💡 Tip: Click and drag with your mouse to rotate, zoom, and pan around the 3D model.")
     
-    wall_height = st.slider("Adjust Wall Height (Z-Axis Extrusion)", min_value=2.0, max_value=6.0, value=3.2, step=0.2)
+    col_ctrl1, col_ctrl2 = st.columns([2, 1])
     
-    sample_rooms = [
-        {"name": "OFFICE-101", "x": [0, 10, 10, 0, 0], "y": [0, 0, 8, 8, 0], "height": wall_height, "wall_color": "#1f77b4"},
-        {"name": "Egress Corridor", "x": [10, 15, 15, 10, 10], "y": [0, 0, 8, 8, 0], "height": wall_height, "wall_color": "#ff7f0e"}
-    ]
+    with col_ctrl1:
+        wall_height = st.slider("Adjust Story Height (Z-Axis Extrusion in feet)", min_value=2.0, max_value=8.0, value=3.2, step=0.2)
     
-    fig_3d = generate_3d_building_model(sample_rooms)
+    with col_ctrl2:
+        render_mode = st.selectbox("Render View Mode:", ["Textured Solid", "Wireframe / Transparent", "Compliance Heatmap"])
+
+    # Dynamically load rooms from parsed JSON output
+    dynamic_rooms = load_rooms_from_json(json_output_path, default_height=wall_height)
+    
+    # Generate interactive 3D model
+    fig_3d = generate_3d_building_model(rooms_data=dynamic_rooms, wall_height=wall_height)
     st.plotly_chart(fig_3d)
