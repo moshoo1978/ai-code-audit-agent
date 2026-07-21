@@ -1,3 +1,4 @@
+from scripts.generator_3d import generate_3d_building_model
 import streamlit as st
 import os
 import json
@@ -92,20 +93,23 @@ if st.button("🚀 Run Full Compliance Audit", type="primary"):
     st.success("Audit Complete!")
 
 with col2:
-    st.subheader("📋 Compliance Audit Report")
-    report_file = "output_data/audit_report.md"
-    if os.path.exists(report_file):
-        with open(report_file, "r") as f:
-            report_text = f.read()
-        st.markdown(report_text)
-        
-        st.divider()
-        st.download_button(
-            label="📥 Download Audit Report (.md)",
-            data=report_text,
-            file_name="PA_UCC_Building_Code_Audit_Report.md",
-            mime="text/markdown",
-            use_container_width=True
-        )
-    else:
-        st.info("Click **Run Full Compliance Audit** to generate the audit report.")
+    tab1, tab2 = st.tabs(["📋 Compliance Audit Report", "🧊 Interactive 3D Model"])
+
+with tab1:
+    # --- PASTE YOUR EXISTING 2D REPORT DISPLAY CODE HERE ---
+    st.header("Architectural Building Code Compliance Audit Report")
+
+
+with tab2:
+    st.subheader("🧊 3D Architectural Extrusion Viewer")
+    st.info("💡 Tip: Click and drag with your mouse to rotate, zoom, and pan around the 3D structure.")
+    
+    wall_height = st.slider("Adjust Wall Height (Z-Axis Extrusion)", min_value=2.0, max_value=6.0, value=3.2, step=0.2)
+    
+    sample_rooms = [
+        {"name": "OFFICE-101", "x": [0, 10, 10, 0, 0], "y": [0, 0, 8, 8, 0], "height": wall_height, "wall_color": "#1f77b4"},
+        {"name": "Egress Corridor", "x": [10, 15, 15, 10, 10], "y": [0, 0, 8, 8, 0], "height": wall_height, "wall_color": "#ff7f0e"}
+    ]
+    
+    fig_3d = generate_3d_building_model(sample_rooms)
+    st.plotly_chart(fig_3d, use_container_width=True)
