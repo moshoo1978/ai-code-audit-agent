@@ -7,8 +7,7 @@ from PIL import Image
 from scripts.parse_pdf import parse_drawing_pdf
 from scripts.run_audit import run_compliance_audit
 from scripts.generator_3d import generate_3d_building_model
-from scripts.generator_3d import generate_3d_building_model, load_rooms_from_json
-
+from scripts.generator_3d import generate_3d_building_model, load_rooms_and_openings
 # Page Configuration
 st.set_page_config(
     page_title="AI Architectural Drawing Audit Agent",
@@ -107,9 +106,9 @@ with tab2:
     with col_ctrl2:
         render_mode = st.selectbox("Render View Mode:", ["Textured Solid", "Wireframe / Transparent", "Compliance Heatmap"])
 
-    # Dynamically load rooms from parsed JSON output
-    dynamic_rooms = load_rooms_from_json(json_output_path, default_height=wall_height)
+    # Dynamically load rooms and openings from parsed JSON
+    dynamic_rooms, dynamic_openings = load_rooms_and_openings(json_output_path, default_height=wall_height)
     
-    # Generate interactive 3D model
-    fig_3d = generate_3d_building_model(rooms_data=dynamic_rooms, wall_height=wall_height)
+    # Generate 3D model with cutouts
+    fig_3d = generate_3d_building_model(rooms_data=dynamic_rooms, openings_data=dynamic_openings, wall_height=wall_height)
     st.plotly_chart(fig_3d)
