@@ -5,3 +5,4 @@ plotly
 reportlab
 opencv-python-headless
 pdf2image
+streamlit-drawable-canvas-fix
