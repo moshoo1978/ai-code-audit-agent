@@ -6,8 +6,9 @@ from PIL import Image
 # Import custom scripts with exact file names
 from scripts.parse_pdf import parse_drawing_pdf
 from scripts.run_audit import run_compliance_audit
-from scripts.generator_3d import generate_3d_building_model
 from scripts.generator_3d import generate_3d_building_model, load_rooms_and_openings, export_to_obj
+from scripts.export_pdf import generate_pdf_report
+
 # Page Configuration
 st.set_page_config(
     page_title="AI Architectural Drawing Audit Agent",
@@ -77,15 +78,32 @@ with tab1:
         run_audit = st.button("🚀 Run Full Compliance Audit")
         if run_audit:
             audit_report_path = os.path.join(output_dir, "audit_report.md")
+            pdf_report_path = os.path.join(output_dir, "PA_UCC_Compliance_Report.pdf")
+            
             try:
                 # Execute compliance audit
                 run_compliance_audit(json_output_path, rules_path, audit_report_path)
                 
                 # Read generated markdown report file
                 if os.path.exists(audit_report_path):
+                    # Generate PDF document
+                    generate_pdf_report(audit_report_path, pdf_report_path)
+                    
                     with open(audit_report_path, "r") as f:
                         report_markdown = f.read()
+                    
                     st.success("Audit Complete!")
+                    
+                    # PDF Download Button
+                    if os.path.exists(pdf_report_path):
+                        with open(pdf_report_path, "rb") as pdf_file:
+                            st.download_button(
+                                label="📄 Download Official PDF Report",
+                                data=pdf_file,
+                                file_name="PA_UCC_Compliance_Report.pdf",
+                                mime="application/pdf"
+                            )
+                    
                     st.markdown(report_markdown)
                 else:
                     st.error("Audit completed, but audit_report.md was not found.")
@@ -121,7 +139,7 @@ with tab2:
                     mime="model/obj"
                 )
 
-    # Render 3D Model with active Render Mode passed
+    # Render 3D Model
     fig_3d = generate_3d_building_model(
         rooms_data=dynamic_rooms, 
         openings_data=dynamic_openings, 

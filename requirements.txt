@@ -1,5 +1,5 @@
 streamlit
-Pillow
-PyMuPDF
-plotly
 pandas
+pillow
+plotly
+reportlab
