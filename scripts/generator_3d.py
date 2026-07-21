@@ -41,7 +41,6 @@ def load_rooms_and_openings(json_path="output_data/plan_text.json", default_heig
         ]
 
     if not openings:
-        # Sample openings (doors and windows)
         openings = [
             {"type": "door", "x": 10, "y": 9, "width": 1.2, "height": 2.1, "wall_axis": "y"},
             {"type": "window", "x": 0, "y": 10, "width": 1.5, "height": 1.2, "sill_height": 1.0, "wall_axis": "y"}
@@ -59,7 +58,7 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
 
     fig = go.Figure()
 
-    # 1. Render Rooms (Walls, Floor Slabs, Ceilings)
+    # 1. Render Rooms
     for room in rooms_data:
         x = room["x"]
         y = room["y"]
@@ -94,7 +93,7 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
             showscale=False
         ))
 
-    # 2. Render Openings (Door Cutouts & Glass Windows)
+    # 2. Render Openings
     for op in openings_data:
         op_type = op.get("type", "door")
         ox = op.get("x", 0)
@@ -104,7 +103,6 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
         sill = op.get("sill_height", 0.0) if op_type == "window" else 0.0
         axis = op.get("wall_axis", "x")
 
-        # Define 3D bounding geometry for opening
         if axis == "x":
             x_pts = [ox, ox + w, ox + w, ox]
             y_pts = [oy, oy, oy, oy]
@@ -125,7 +123,6 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
             showscale=False
         ))
 
-    # Layout & Camera Config
     fig.update_layout(
         title="🏛️ Dynamic 3D Model with Door & Window Cutouts",
         scene=dict(
@@ -140,3 +137,35 @@ def generate_3d_building_model(rooms_data=None, openings_data=None, wall_height=
     )
 
     return fig
+
+
+def export_to_obj(rooms_data, file_path="output_data/building_model.obj", wall_height=3.2):
+    """
+    Exports 3D wall mesh coordinates into a standard Wavefront .OBJ file format.
+    """
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    lines = ["# AI Architectural Drawing Audit Agent - 3D OBJ Export\n"]
+    
+    v_index = 1
+    for room in rooms_data:
+        x = room["x"]
+        y = room["y"]
+        h = room.get("height", wall_height)
+        
+        lines.append(f"o {room['name'].replace(' ', '_')}\n")
+        
+        # Write Vertices
+        for i in range(len(x) - 1):
+            lines.append(f"v {x[i]} {y[i]} 0.0\n")
+            lines.append(f"v {x[i+1]} {y[i+1]} 0.0\n")
+            lines.append(f"v {x[i+1]} {y[i+1]} {h}\n")
+            lines.append(f"v {x[i]} {y[i]} {h}\n")
+            
+            # Write Quad Faces
+            lines.append(f"f {v_index} {v_index+1} {v_index+2} {v_index+3}\n")
+            v_index += 4
+
+    with open(file_path, "w") as f:
+        f.writelines(lines)
+    
+    return file_path

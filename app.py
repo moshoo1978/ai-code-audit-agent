@@ -7,7 +7,7 @@ from PIL import Image
 from scripts.parse_pdf import parse_drawing_pdf
 from scripts.run_audit import run_compliance_audit
 from scripts.generator_3d import generate_3d_building_model
-from scripts.generator_3d import generate_3d_building_model, load_rooms_and_openings
+from scripts.generator_3d import generate_3d_building_model, load_rooms_and_openings, export_to_obj
 # Page Configuration
 st.set_page_config(
     page_title="AI Architectural Drawing Audit Agent",
@@ -98,7 +98,7 @@ with tab2:
     st.subheader("🧊 Interactive 3D Architectural Extrusion Viewer")
     st.info("💡 Tip: Click and drag with your mouse to rotate, zoom, and pan around the 3D model.")
     
-    col_ctrl1, col_ctrl2 = st.columns([2, 1])
+    col_ctrl1, col_ctrl2, col_ctrl3 = st.columns([2, 1, 1])
     
     with col_ctrl1:
         wall_height = st.slider("Adjust Story Height (Z-Axis Extrusion in feet)", min_value=2.0, max_value=8.0, value=3.2, step=0.2)
@@ -106,9 +106,21 @@ with tab2:
     with col_ctrl2:
         render_mode = st.selectbox("Render View Mode:", ["Textured Solid", "Wireframe / Transparent", "Compliance Heatmap"])
 
-    # Dynamically load rooms and openings from parsed JSON
+    # Load rooms and openings
     dynamic_rooms, dynamic_openings = load_rooms_and_openings(json_output_path, default_height=wall_height)
     
-    # Generate 3D model with cutouts
+    with col_ctrl3:
+        # Generate .OBJ file for CAD/BIM export
+        obj_file_path = export_to_obj(dynamic_rooms, "output_data/building_model.obj", wall_height=wall_height)
+        if os.path.exists(obj_file_path):
+            with open(obj_file_path, "rb") as f:
+                st.download_button(
+                    label="💾 Export 3D .OBJ File",
+                    data=f,
+                    file_name="building_model.obj",
+                    mime="model/obj"
+                )
+
+    # Render 3D Model
     fig_3d = generate_3d_building_model(rooms_data=dynamic_rooms, openings_data=dynamic_openings, wall_height=wall_height)
     st.plotly_chart(fig_3d)
